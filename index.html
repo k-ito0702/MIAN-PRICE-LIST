@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>MIAN BEAUTY 価格検索アプリ</title>
+    
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3461/3461285.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f1f5f9;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: contain;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        .tab-active {
+            color: #e11d48;
+            border-bottom: 3px solid #e11d48;
+        }
+
+        .brand-active {
+            background-color: #4f46e5 !important;
+            color: white !important;
+        }
+
+        .product-card {
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            transition: transform 0.1s;
+        }
+        .product-card:active {
+            transform: scale(0.96);
+        }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .price-bg {
+            background-color: #f8fafc;
+        }
+
+        #productGrid {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-10">
+
+    <header class="bg-[#121212] text-white px-4 py-4 sticky top-0 z-50 shadow-md">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span class="font-black italic text-xl tracking-tighter text-rose-500">MIAN</span>
+                <span class="font-bold text-lg tracking-tighter">BEAUTY</span>
+                <span class="text-[9px] text-gray-400 border-l border-gray-700 pl-2 uppercase tracking-widest">SALON SUPPORT</span>
+            </div>
+            <div class="text-[10px] bg-rose-600 px-2 py-0.5 rounded font-bold uppercase">2026 最新データ</div>
+        </div>
+    </header>
+
+    <nav class="bg-white border-b sticky top-[60px] z-40 shadow-sm">
+        <div class="flex overflow-x-auto hide-scrollbar px-2" id="categoryTabs">
+            </div>
+    </nav>
+
+    <div class="bg-white px-4 py-3 border-b sticky top-[105px] z-30">
+        <div class="flex overflow-x-auto space-x-2 hide-scrollbar" id="brandContainer">
+            </div>
+    </div>
+
+    <div class="px-4 py-3 sticky top-[162px] z-20 bg-[#f1f5f9]/95 backdrop-blur-md">
+        <div class="relative max-w-md mx-auto">
+            <input type="text" id="searchInput" placeholder="商品名・容量・ブランドで検索..." 
+                class="w-full bg-white border border-gray-200 rounded-xl py-3 pl-11 pr-4 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-base">
+            <div class="absolute left-4 top-3.5 text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <main class="px-3 py-2 grid grid-cols-2 gap-3" id="productGrid">
+        </main>
+
+    <footer class="mt-10 mb-6 text-center">
+        <div class="text-[10px] text-gray-400 font-bold italic tracking-widest uppercase">MIAN BEAUTY OFFICIAL DATA SERVICE</div>
+        <div class="text-[9px] text-gray-300 mt-1">※価格はすべて税抜表記です。</div>
+        <div class="text-[9px] text-gray-400 mt-4 opacity-50 italic">Supported by Gemini</div>
+    </footer>
+
+    <script>
+        // データセット
+        const allData = [
+            // --- ヘアカラー ---
+            { main: "ヘアカラー", brand: "ルーチェント", name: "ルーチェント(1剤)", cap: "80g", salon: 680, list: null },
+            { main: "ヘアカラー", brand: "ルーチェント", name: "ルーチェントオキシ　3％、6％", cap: "1,000mL", salon: 1300, list: null },
+            { main: "ヘアカラー", brand: "ルーチェント", name: "ルーチェントコスメ", cap: "150g", salon: 900, list: null },
+            { main: "ヘアカラー", brand: "ルーチェント", name: "ルーチェントカラーリムーバー", cap: "200mL", salon: 800, list: null },
+            { main: "ヘアカラー", brand: "ハイトーンハーバル", name: "ハイトーンハーバル（1剤）", cap: "120g", salon: 850, list: null },
+            { main: "ヘアカラー", brand: "フォードオキシ", name: "フォードオキシ　3％、6%", cap: "2,000mL", salon: 1800, list: null },
+            { main: "ヘアカラー", brand: "シアトネ", name: "シアトネ(1剤)", cap: "80g", salon: 680, list: null },
+            { main: "ヘアカラー", brand: "シアトネ", name: "シアトネオキシ　2％、4.5％、6%", cap: "1,000mL", salon: 1200, list: null },
+            { main: "ヘアカラー", brand: "ザ　ブリーチ", name: "ザ　ブリーチ（350g×2）", cap: "700g", salon: 4900, list: null },
+            { main: "ヘアカラー", brand: "クイックワンプロ", name: "クイックワン-プロ店販用", cap: "A剤60g　B剤60g", salon: 1150, list: 1800 },
+            { main: "ヘアカラー", brand: "黒髪GOLD", name: "黒髪GOLD", cap: "110g(164mL)", salon: 800, list: 1200 },
+
+            // --- パーマ ---
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "ACクリーム10", cap: "400g", salon: 1700, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "ACクリーム30", cap: "400g", salon: 1700, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "ATクリーム50", cap: "400g", salon: 1700, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "ラクトン　1A", cap: "400g", salon: 1700, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "ラクトン　1B", cap: "32mL", salon: 4200, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "Cクリーム90", cap: "400g", salon: 1700, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "Cクリーム120", cap: "400g", salon: 1700, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "Tクリーム100", cap: "400g", salon: 1500, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "Tクリーム150", cap: "400g", salon: 1500, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "ブロムクリーム　2剤", cap: "400g", salon: 1200, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "ローション　2剤", cap: "400mL", salon: 980, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "クリーム　2剤", cap: "400g", salon: 1300, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "プレアウトローション", cap: "400ｍL", salon: 1800, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "PPTローション", cap: "400mL", salon: 2000, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "CMCローション", cap: "400mL", salon: 2000, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "CMCクリーム", cap: "400g", salon: 2000, list: null },
+            { main: "パーマ", brand: "ソヴ(酸性ストレート)", name: "バッファーローション", cap: "400ｍL", salon: 1800, list: null },
+            { main: "パーマ", brand: "ドレスコート　メリリア(パーマ)", name: "CN 1剤(シスノーマル)", cap: "400mL(5人用)", salon: 1150, list: null },
+            { main: "パーマ", brand: "ドレスコート　メリリア(パーマ)", name: "CH 1剤(シスハード)", cap: "400mL(5人用)", salon: 1150, list: null },
+            { main: "パーマ", brand: "ドレスコート　メリリア(パーマ)", name: "チオ 2剤", cap: "400mL(5人用)", salon: 650, list: null },
+            { main: "パーマ", brand: "ドレスコート　メリリア(パーマ)", name: "TC 1剤(チオシス)", cap: "400mL(5人用)", salon: 980, list: null },
+            { main: "パーマ", brand: "ドレスコート　メリリア(パーマ)", name: "TN 1剤(チオノーマル)", cap: "400mL(5人用)", salon: 780, list: null },
+            { main: "パーマ", brand: "ドレスコート　メリリア(パーマ)", name: "TH 1剤(チオハード)", cap: "400mL(5人用)", salon: 780, list: null },
+            { main: "パーマ", brand: "ドレスコート　メリリア(パーマ)", name: "チオ 2剤(620円版)", cap: "400mL(5人用)", salon: 620, list: null },
+            { main: "パーマ", brand: "ドレスコートコスメ(パーマ)", name: "ローション L30", cap: "400mL", salon: 1200, list: null },
+            { main: "パーマ", brand: "ドレスコートコスメ(パーマ)", name: "ローション L60", cap: "400mL", salon: 1200, list: null },
+            { main: "パーマ", brand: "ドレスコートコスメ(パーマ)", name: "セカンドローション", cap: "1,000mL", salon: 1300, list: null },
+            { main: "パーマ", brand: "サポートツール", name: "モイスチャーアップ", cap: "1,000mL", salon: 1700, list: null },
+
+            // --- ヘアケア ---
+            { main: "ヘアケア", brand: "CE3", name: "シャンプー", cap: "800mLリフィル", salon: 680, list: 1400 },
+            { main: "ヘアケア", brand: "CE3", name: "シャンプー店販用", cap: "1,000mL", salon: 1200, list: 2400 },
+            { main: "ヘアケア", brand: "CE3", name: "コンディショナー", cap: "2,000ｇ×2", salon: 3400, list: null },
+            { main: "ヘアケア", brand: "CE3", name: "トリートメント", cap: "750gリフィル", salon: 850, list: 1500 },
+            { main: "ヘアケア", brand: "CE3", name: "トリートメント店販用", cap: "1,000g", salon: 1300, list: 2600 },
+            { main: "ヘアケア", brand: "CE3", name: "CE3共通詰替えボトル", cap: "1,000mL/g用", salon: 480, list: 600 },
+            { main: "ヘアケア", brand: "エイジケア", name: "クレイシャンプー", cap: "290mL", salon: 1120, list: 1600 },
+            { main: "ヘアケア", brand: "エイジケア", name: "クレイシャンプー　リフィル", cap: "550mL", salon: 1750, list: 2500 },
+            { main: "ヘアケア", brand: "エイジケア", name: "クレイヘアパック", cap: "210g", salon: 1120, list: 1600 },
+            { main: "ヘアケア", brand: "エイジケア", name: "クレイヘアパック　リフィル", cap: "550g", salon: 1750, list: 2500 },
+            { main: "ヘアケア", brand: "エイジケア", name: "薬用エイジキュアLC育毛剤", cap: "150mL", salon: 2600, list: 4000 },
+            { main: "ヘアケア", brand: "エイジケア", name: "クレイシャンプーリフィル専用カートリッジ", cap: "――", salon: 740, list: 930 },
+            { main: "ヘアケア", brand: "エイジケア", name: "クレイヘアパックリフィル専用カートリッジ", cap: "――", salon: 740, list: 930 },
+            { main: "ヘアケア", brand: "ルッチヘアケア", name: "メルティフルウォッシュ", cap: "245mL", salon: 1120, list: 1600 },
+            { main: "ヘアケア", brand: "ルッチヘアケア", name: "メルティフルウォッシュ　ラージボトル", cap: "610mL", salon: 1960, list: 2800 },
+            { main: "ヘアケア", brand: "ルッチヘアケア", name: "メルティフルウォッシュ　リフィル", cap: "550mL", salon: 1610, list: 2300 },
+            { main: "ヘアケア", brand: "ルッチヘアケア", name: "メルティフルパック", cap: "200g", salon: 1120, list: 1600 },
+            { main: "ヘアケア", brand: "ルッチヘアケア", name: "メルティフルパック　ラージボトル", cap: "590g", salon: 2100, list: 3000 },
+            { main: "ヘアケア", brand: "ルッチヘアケア", name: "メルティフルパック　リフィル", cap: "550g", salon: 1750, list: 2500 },
+            { main: "ヘアケア", brand: "ルッチヘアケア", name: "メルティフルウォーター", cap: "150mL", salon: 1400, list: 2000 },
+            { main: "ヘアケア", brand: "ルッチヘアケア", name: "メルティフルウォーター　リフィル", cap: "300mL", salon: 2100, list: 3000 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "スーパークールシャンプー", cap: "300ｍL", salon: 1260, list: 1800 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "スーパークールシャンプー　ラージボトル", cap: "600mL", salon: 2240, list: 3200 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "スーパークールシャンプー　リフィル", cap: "550mL", salon: 1890, list: 2700 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "マイルドクールシャンプー", cap: "300mL", salon: 1260, list: 1800 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "マイルドクールシャンプー　ラージボトル", cap: "600mL", salon: 2240, list: 3200 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "マイルドクールシャンプー　リフィル", cap: "550mL", salon: 1890, list: 2700 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "トリートメント", cap: "230g", salon: 1260, list: 1800 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "トリートメント　ラージボトル", cap: "590g", salon: 2240, list: 3200 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "トリートメント　リフィル", cap: "550g", salon: 1890, list: 2700 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "アイスリフレッシュクリーム", cap: "220g", salon: 1260, list: 1800 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "スキャルプポッピングスプレー", cap: "95g", salon: 840, list: 1200 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "ウォッシャブルフォーム", cap: "320g", salon: 1960, list: 2800 },
+            { main: "ヘアケア", brand: "シーズントリップ", name: "フィンランドスタイル　モイスチュアクリーム", cap: "80g", salon: 980, list: 1400 },
+            { main: "ヘアケア", brand: "ランドケア", name: "エッセンスソープ", cap: "300mL", salon: 3640, list: 5600 },
+            { main: "ヘアケア", brand: "ランドケア", name: "エッセンスソープ　リフィル", cap: "600mL", salon: 5460, list: 8400 },
+            { main: "ヘアケア", brand: "ランドケア", name: "ハイドレーションマスク", cap: "230g", salon: 2800, list: 4300 },
+            { main: "ヘアケア", brand: "ランドケア", name: "ハイドレーションマスク　リフィル", cap: "600g", salon: 5460, list: 8400 },
+            { main: "ヘアケア", brand: "ランドケア", name: "グローイングエッセンス", cap: "150mL", salon: 3250, list: 5000 },
+            { main: "ヘアケア", brand: "ランドケア", name: "グローイングエッセンス　リフィル", cap: "300mL", salon: 4880, list: 7500 },
+            { main: "ヘアケア", brand: "ランドケア", name: "エッセンスローション", cap: "200mL", salon: 1430, list: 2200 },
+            { main: "ヘアケア", brand: "ランドケア", name: "エッセンスローション　リフィル", cap: "500mL", salon: 2470, list: 3800 },
+            { main: "ヘアケア", brand: "ランドケア", name: "フレックススパクリーム（リフィル）", cap: "600g", salon: 4100, list: null },
+            { main: "ヘアケア", brand: "ランドケア", name: "専用カートリッジボトル", cap: "600mL/600g用", salon: 800, list: 1000 },
+            { main: "ヘアケア", brand: "ランドケア", name: "アロマオイル　リラックス", cap: "15mL", salon: 1800, list: null },
+            { main: "ヘアケア", brand: "ランドケア", name: "アロマオイル　リフレッシュ", cap: "15mL", salon: 1800, list: null },
+            { main: "ヘアケア", brand: "ランドケア", name: "アロマオイル　チャージ", cap: "15mL", salon: 1800, list: null },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "シャンプー", cap: "300mL", salon: 1105, list: 1700 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "シャンプー　ラージボトル", cap: "600mL", salon: 1950, list: 3000 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "シャンプー　リフィル", cap: "580mL", salon: 1690, list: 2600 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "シャンプー　ミニ", cap: "50mL", salon: 350, list: 500 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "シャンプー　業務用リフィル", cap: "2,000mL", salon: 4600, list: null },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "モイストパック", cap: "230g", salon: 1105, list: 1700 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "モイストパック　ラージボトル", cap: "590g", salon: 1950, list: 3000 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "モイストパック　リフィル", cap: "550g", salon: 1690, list: 2600 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "モイストパック　ミニ", cap: "50g", salon: 350, list: 500 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "モイストパック　業務用リフィル", cap: "2,000g", salon: 4600, list: null },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "ウォータートリートメント", cap: "145g", salon: 1040, list: 1600 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "ウォータートリートメント ミニ", cap: "25g", salon: 200, list: 400 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "ウォータートリートメントモイスト", cap: "145g", salon: 1040, list: 1600 },
+            { main: "ヘアケア", brand: "ピュアファクター", name: "ウォータートリートメントモイスト ミニ", cap: "25g", salon: 200, list: 400 },
+            { main: "ヘアケア", brand: "ピュアファクター　アシッド", name: "シャンプー", cap: "300mL", salon: 1105, list: 1700 },
+            { main: "ヘアケア", brand: "ピュアファクター　アシッド", name: "シャンプー　ラージボトル", cap: "600mL", salon: 1950, list: 3000 },
+            { main: "ヘアケア", brand: "ピュアファクター　アシッド", name: "シャンプー　リフィル", cap: "580mL", salon: 1690, list: 2600 },
+            { main: "ヘアケア", brand: "ピュアファクター　アシッド", name: "トリートメント", cap: "230g", salon: 1105, list: 1700 },
+            { main: "ヘアケア", brand: "ピュアファクター　アシッド", name: "トリートメント　ラージボトル", cap: "590g", salon: 1950, list: 3000 },
+            { main: "ヘアケア", brand: "ピュアファクター　アシッド", name: "トリートメント　リフィル", cap: "550g", salon: 1690, list: 2600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVシャンプー", cap: "300mL", salon: 1190, list: 1700 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVシャンプー　ラージボトル", cap: "600mL", salon: 2100, list: 3000 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVシャンプー　リフィル", cap: "580mL", salon: 1820, list: 2600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVシャンプー　ミニ", cap: "60mL", salon: 420, list: 600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVシャンプー　業務用リフィル", cap: "2,000mL", salon: 4600, list: null },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVトリートメント", cap: "230g", salon: 1190, list: 1700 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVトリートメント　ラージボトル", cap: "590g", salon: 2100, list: 3000 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVトリートメント　リフィル", cap: "550g", salon: 1820, list: 2600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVトリートメント　ミニ", cap: "50g", salon: 420, list: 600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SVトリートメント　業務用リフィル", cap: "2,000g", salon: 4600, list: null },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "SV CMCコンク", cap: "90g", salon: 1400, list: 2000 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAシャンプー", cap: "300mL", salon: 1190, list: 1700 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAシャンプー　ラージボトル", cap: "600mL", salon: 2100, list: 3000 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAシャンプー　リフィル", cap: "580mL", salon: 1820, list: 2600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAシャンプー　ミニ", cap: "60mL", salon: 420, list: 600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAシャンプー　業務用リフィル", cap: "2,000mL", salon: 4600, list: null },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAトリートメント", cap: "230g", salon: 1190, list: 1700 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAトリートメント　ラージボトル", cap: "590g", salon: 2100, list: 3000 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAトリートメント　リフィル", cap: "550g", salon: 1820, list: 2600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAトリートメント　ミニ", cap: "50g", salon: 420, list: 600 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MAトリートメント　業務用リフィル", cap: "2,000g", salon: 4600, list: null },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MA CMCコンク", cap: "90g", salon: 1400, list: 2000 },
+            { main: "ヘアケア", brand: "ピュアファクター　ディープエレメント", name: "MIANヘアケア専用カートリッジ", cap: "580mL・550g用", salon: 800, list: 900 },
+            { main: "ヘアケア", brand: "サフナ", name: "ボリュームメイクフォーム", cap: "180g", salon: 1050, list: 1500 },
+            { main: "ヘアケア", brand: "トーヒエッセンス", name: "トーヒエッセンス", cap: "200mL", salon: 1100, list: 1700 },
+            { main: "ヘアケア", brand: "トーヒエッセンス", name: "トーヒエッセンス　リフィル", cap: "1,000mL", salon: 2500, list: null },
+            { main: "ヘアケア", brand: "トーヒエッセンス", name: "トーヒエッセンス　エア", cap: "225g", salon: 1100, list: 1700 },
+
+            // --- トリートメント ---
+            { main: "トリートメント", brand: "モルティナ", name: "HR1　カートリッジ付", cap: "550g", salon: 3600, list: null },
+            { main: "トリートメント", brand: "モルティナ", name: "HR1　リフィル", cap: "550g", salon: 2600, list: null },
+            { main: "トリートメント", brand: "モルティナ", name: "HR2　カートリッジ付", cap: "550g", salon: 3600, list: null },
+            { main: "トリートメント", brand: "モルティナ", name: "HR2　リフィル", cap: "550g", salon: 2600, list: null },
+            { main: "トリートメント", brand: "モルティナ", name: "HR3A　カートリッジ付", cap: "550g", salon: 3600, list: null },
+            { main: "トリートメント", brand: "モルティナ", name: "HR3A　リフィル", cap: "550g", salon: 2600, list: null },
+            { main: "トリートメント", brand: "モルティナ", name: "HR3B　カートリッジ付", cap: "550g", salon: 3600, list: null },
+            { main: "トリートメント", brand: "モルティナ", name: "HR3B　リフィル", cap: "550g", salon: 2600, list: null },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ソフト", cap: "210mL", salon: 1440, list: 2400 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ソフト　リフィル", cap: "360mL", salon: 1980, list: 3300 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ソフト　カートリッジ付", cap: "550ｍL", salon: 3240, list: 5400 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ソフト　リフィル(550)", cap: "550mL", salon: 2520, list: 4200 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ソフト　ミニ", cap: "50ｍL", salon: 480, list: 800 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ディープ", cap: "210mL", salon: 1440, list: 2400 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ディープ　リフィル", cap: "360mL", salon: 1980, list: 3300 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ディープ　カートリッジ付", cap: "550ｍL", salon: 3240, list: 5400 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ディープ　リフィル(550)", cap: "550mL", salon: 2520, list: 4200 },
+            { main: "トリートメント", brand: "モルティナ", name: "スムースウォッシュ　ディープ　ミニ", cap: "50ｍL", salon: 480, list: 800 },
+            { main: "トリートメント", brand: "モルティナ", name: "スリークチャージ", cap: "200g", salon: 1440, list: 2400 },
+            { main: "トリートメント", brand: "モルティナ", name: "スリークチャージ　リフィル", cap: "360g", salon: 1980, list: 3300 },
+            { main: "トリートメント", brand: "モルティナ", name: "スリークチャージ　カートリッジ付", cap: "550g", salon: 3240, list: 5400 },
+            { main: "トリートメント", brand: "モルティナ", name: "スリークチャージ　リフィル(550)", cap: "550g", salon: 2520, list: 4200 },
+            { main: "トリートメント", brand: "モルティナ", name: "スリークチャージ　ミニ", cap: "50g", salon: 480, list: 800 },
+            { main: "トリートメント", brand: "モルティナ", name: "モイストチャージ", cap: "200g", salon: 1440, list: 2400 },
+            { main: "トリートメント", brand: "モルティナ", name: "モイストチャージ　リフィル", cap: "360g", salon: 1980, list: 3300 },
+            { main: "トリートメント", brand: "モルティナ", name: "モイストチャージ　カートリッジ付", cap: "550g", salon: 3240, list: 5400 },
+            { main: "トリートメント", brand: "モルティナ", name: "モイストチャージ　リフィル(550)", cap: "550g", salon: 2520, list: 4200 },
+            { main: "トリートメント", brand: "モルティナ", name: "モイストチャージ　ミニ", cap: "50g", salon: 480, list: 800 },
+            { main: "トリートメント", brand: "モルティナ", name: "エンリッチマスク", cap: "120g", salon: 1440, list: 2400 },
+            { main: "トリートメント", brand: "モルティナ", name: "エンリッチマスク　ミニ", cap: "50g", salon: 720, list: 1200 },
+            { main: "トリートメント", brand: "モルティナ", name: "シャイニーオイル", cap: "80mL", salon: 1680, list: 2800 },
+            { main: "トリートメント", brand: "モルティナ", name: "シャイニーオイル　リフィル", cap: "75mL", salon: 1440, list: 2400 },
+            { main: "トリートメント", brand: "モルティナ", name: "ピュアオイル", cap: "80mL", salon: 1680, list: 2800 },
+            { main: "トリートメント", brand: "モルティナ", name: "ピュアオイル　リフィル", cap: "75mL", salon: 1440, list: 2400 },
+            { main: "トリートメント", brand: "モルティナ", name: "スキャルプセラム", cap: "120mL", salon: 1680, list: 2800 },
+            { main: "トリートメント", brand: "モルティナ", name: "スキャルプセラム　リフィル", cap: "200mL", salon: 2100, list: 3500 },
+            { main: "トリートメント", brand: "アクアクチュール", name: "1stクリーム", cap: "250g", salon: 1700, list: null },
+            { main: "トリートメント", brand: "アクアクチュール", name: "2ndミスト　リフィル", cap: "500mL", salon: 2500, list: null },
+            { main: "トリートメント", brand: "アクアクチュール", name: "3rdクリーム", cap: "250g", salon: 1700, list: null },
+            { main: "トリートメント", brand: "アクアクチュール", name: "モアリュクス", cap: "50g", salon: 500, list: 1000 },
+
+            // --- スタイリング ---
+            { main: "スタイリング", brand: "モノーク", name: "オイル", cap: "60mL", salon: 2040, list: 3400 },
+            { main: "スタイリング", brand: "モノーク", name: "オイルジェリー", cap: "80g", salon: 1800, list: 3000 },
+            { main: "スタイリング", brand: "モノーク", name: "バーム", cap: "45g", salon: 2040, list: 3400 },
+            { main: "スタイリング", brand: "モノーク", name: "ウォータージェル", cap: "200mL", salon: 1980, list: 3300 },
+            { main: "スタイリング", brand: "モノーク", name: "バームワックス", cap: "45g", salon: 1920, list: 3200 },
+            { main: "スタイリング", brand: "ルッチ", name: "フラッフィラテ", cap: "150mL", salon: 1260, list: 1800 },
+            { main: "スタイリング", brand: "ルッチ", name: "メルティシロップ", cap: "100mL", salon: 1400, list: 2000 },
+            { main: "スタイリング", brand: "ルッチ", name: "シフォンミルク", cap: "95g", salon: 1260, list: 1800 },
+            { main: "スタイリング", brand: "ルッチ", name: "バウンシルクリーム", cap: "80g", salon: 1050, list: 1500 },
+            { main: "スタイリング", brand: "ルッチ", name: "カーリーホイップ", cap: "150mL", salon: 1260, list: 1800 },
+            { main: "スタイリング", brand: "ルッチ", name: "スリーキィクリーム", cap: "100g", salon: 1050, list: 1500 },
+            { main: "スタイリング", brand: "ノフィ", name: "フォルムメイクスプレー", cap: "180g", salon: 910, list: 1300 },
+            { main: "スタイリング", brand: "ノフィ", name: "ホールドスプレー", cap: "180g", salon: 910, list: 1300 },
+            { main: "スタイリング", brand: "ノフィ", name: "グロススプレー", cap: "180g", salon: 910, list: 1300 },
+            { main: "スタイリング", brand: "ノフィ", name: "ウェーブメイクフォーム", cap: "220g", salon: 910, list: 1300 },
+            { main: "スタイリング", brand: "ノフィ", name: "ニュアンスミルク", cap: "85g", salon: 1120, list: 1600 },
+            { main: "スタイリング", brand: "ノフィ", name: "アレンジワックス", cap: "80g", salon: 910, list: 1300 },
+            { main: "スタイリング", brand: "ノフィ", name: "ハードワックス", cap: "60g", salon: 910, list: 1300 },
+            { main: "スタイリング", brand: "ノフィ", name: "ニュアンスジャム", cap: "110g", salon: 1120, list: 1600 },
+            { main: "スタイリング", brand: "ノフィ", name: "ハードジェル", cap: "200g", salon: 1120, list: 1600 },
+            { main: "スタイリング", brand: "ノフィ", name: "ハードジェル　リフィル", cap: "360g", salon: 1540, list: 2200 },
+            { main: "スタイリング", brand: "ノフィ", name: "リペアオイル", cap: "95mL", salon: 1400, list: 2000 },
+            { main: "スタイリング", brand: "ノフィ", name: "リペアエマルジョン", cap: "95g", salon: 1400, list: 2000 },
+
+            // --- レジェンド ---
+            { main: "レジェンド", brand: "エメラルド", name: "エメラルド", cap: "275g(400mL)", salon: 900, list: 1500 },
+            { main: "レジェンド", brand: "エメラルド", name: "エメラルド　ベビー", cap: "58g(85mL)", salon: 380, list: 550 },
+            { main: "レジェンド", brand: "エメラルド", name: "エメラルド エクセレント", cap: "240g(350mL)", salon: 900, list: 1500 },
+            { main: "レジェンド", brand: "エメラルド", name: "エメラルド エクセレント　ベビー", cap: "50g(74mL)", salon: 380, list: 550 },
+            { main: "レジェンド", brand: "サファイア", name: "サファイア", cap: "246g(360mL)", salon: 640, list: 1100 },
+            { main: "レジェンド", brand: "ボリュームオン", name: "ボリュームオン", cap: "192g(280mL)", salon: 1150, list: 1800 },
+            { main: "レジェンド", brand: "ウェットフォーム", name: "ウェットフォーム", cap: "300g", salon: 1200, list: 2000 },
+            { main: "レジェンド", brand: "ルミナ S", name: "ルミナ S", cap: "50g", salon: 720, list: 1200 },
+            { main: "レジェンド", brand: "ルミナトーン", name: "ルミナトーン(170)", cap: "127g(170mL)", salon: 1100, list: 1700 },
+            { main: "レジェンド", brand: "ルミナトーン", name: "ルミナトーン(300)", cap: "225g(300mL)", salon: 1450, list: 2450 },
+
+            // --- スキンケア ---
+            { main: "スキンケア", brand: "モチュレ", name: "アスタリノ", cap: "120g", salon: 1950, list: 3000 },
+            { main: "スキンケア", brand: "モチュレ", name: "アスタリノ　リフィル", cap: "500g", salon: 5720, list: 8800 },
+            { main: "スキンケア", brand: "モチュレ", name: "プラセリカ", cap: "150g", salon: 1950, list: 3000 },
+            { main: "スキンケア", brand: "モチュレ", name: "プラセリカ　リフィル", cap: "500g", salon: 4550, list: 7000 },
+            { main: "スキンケア", brand: "モチュレ", name: "モチュレリフィル専用カートリッジボトル", cap: "500g用", salon: 800, list: 1000 },
+
+            // --- ツール・その他 ---
+            { main: "ツール・その他", brand: "MIANバッグ", name: "MIANペーパーバッグ　M", cap: "1枚あたり", salon: 75, list: null },
+        ];
+
+        let state = {
+            category: 'ヘアカラー',
+            brand: 'すべて',
+            search: ''
+        };
+
+        const categories = [...new Set(allData.map(d => d.main))];
+
+        function init() {
+            const tabContainer = document.getElementById('categoryTabs');
+            tabContainer.innerHTML = categories.map(cat => `
+                <button onclick="setCategory('${cat}')" class="main-cat px-4 py-3 text-sm font-bold whitespace-nowrap text-gray-400" id="cat-${cat}">${cat}</button>
+            `).join('');
+            updateUI();
+        }
+
+        function setCategory(cat) {
+            state.category = cat;
+            state.brand = 'すべて';
+            updateUI();
+        }
+
+        function setBrand(brand) {
+            state.brand = brand;
+            updateUI();
+        }
+
+        function updateUI() {
+            document.querySelectorAll('.main-cat').forEach(el => {
+                el.classList.remove('tab-active', 'text-gray-900');
+                el.classList.add('text-gray-400');
+            });
+            const activeCat = document.getElementById('cat-' + state.category);
+            if(activeCat) {
+                activeCat.classList.add('tab-active', 'text-gray-900');
+                activeCat.classList.remove('text-gray-400');
+            }
+
+            const brands = ['すべて', ...new Set(allData.filter(d => d.main === state.category).map(d => d.brand))];
+            const brandContainer = document.getElementById('brandContainer');
+            brandContainer.innerHTML = brands.map(b => `
+                <button onclick="setBrand('${b}')" class="px-4 py-1.5 rounded-full text-[11px] font-bold border whitespace-nowrap transition-all ${state.brand === b ? 'brand-active border-indigo-600' : 'bg-white text-gray-500 border-gray-200'}">
+                    ${b}
+                </button>
+            `).join('');
+
+            renderProducts();
+        }
+
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            const filtered = allData.filter(d => {
+                const matchCat = d.main === state.category;
+                const matchBrand = state.brand === 'すべて' || d.brand === state.brand;
+                const matchSearch = d.name.toLowerCase().includes(state.search.toLowerCase()) || 
+                                   d.brand.toLowerCase().includes(state.search.toLowerCase()) ||
+                                   d.cap.toLowerCase().includes(state.search.toLowerCase());
+                return matchCat && matchBrand && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="col-span-2 py-20 text-center text-gray-400 text-sm">該当する商品は見つかりませんでした</div>';
+                return;
+            }
+
+            grid.innerHTML = filtered.map(d => `
+                <div class="product-card bg-white rounded-2xl overflow-hidden flex flex-col border border-gray-100">
+                    <div class="p-3 flex-grow">
+                        <div class="text-[9px] font-bold text-rose-500 uppercase tracking-tighter line-clamp-1 mb-0.5">${d.brand}</div>
+                        <h3 class="text-[10px] font-bold text-gray-800 leading-tight mb-2 min-h-[2.5rem] line-clamp-2">${d.name}</h3>
+                        <div class="mb-2">
+                            <span class="inline-block bg-slate-100 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-bold">
+                                ${d.cap}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="price-bg px-3 py-2 border-t border-slate-50">
+                        <div class="flex items-center justify-between gap-1">
+                            <div class="flex flex-col">
+                                <span class="text-[7px] text-indigo-500 font-bold tracking-tighter">サロン価格</span>
+                                <span class="text-[14px] font-black text-indigo-700 leading-none">
+                                    <span class="text-[9px] font-bold mr-0.5">¥</span>${typeof d.salon === 'number' ? d.salon.toLocaleString() : d.salon}
+                                </span>
+                            </div>
+                            <div class="flex flex-col text-right">
+                                <span class="text-[7px] text-gray-400 font-bold tracking-tighter">定価(税抜)</span>
+                                <span class="text-[11px] font-bold text-gray-400 leading-none">
+                                    ${d.list ? `<span class="text-[8px] mr-0.5">¥</span>${typeof d.list === 'number' ? d.list.toLocaleString() : d.list}` : '――'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            state.search = e.target.value;
+            renderProducts();
+        });
+
+        init();
+    </script>
+</body>
+</html>
